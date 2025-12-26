@@ -31,6 +31,21 @@ fn show_list(list: &Vec<String>) {
     }
 }
 
+fn single_line_add(tasks: &mut Vec<String>, command: &str) {
+    let new_task = command.strip_prefix("add ").expect("Command not 'add'");
+    tasks.push(new_task.trim().to_string());
+    println!("{}", "Task added successfully!".bright_green());
+}
+
+fn multi_line_add(tasks: &mut Vec<String>) {
+    let mut new_task = String::new();
+    io::stdin()
+        .read_line(&mut new_task)
+        .expect("Failed to read task");
+    
+    tasks.push(new_task.trim().to_string());
+}
+
 fn main() {
     decorate();
 
@@ -49,32 +64,33 @@ fn main() {
 
         
         let command = input.trim();
-        match command {
-            "add" => {
-                let mut new_task = String::new();
-                io::stdin()
-                    .read_line(&mut new_task)
-                    .expect("Failed to read task");
-                
-                tasks.push(new_task);
-            }
 
-            "load" => {
-                match read_file() {
-                    Ok(loaded_list) => {
-                        println!("{}", "\nList Loaded successfully from file\n".bright_yellow());
+        if command.starts_with("add ") { //one-liner add method, i.e add <taskname>
+            single_line_add(&mut tasks, command);
 
-                        if loaded_list.is_empty() {
-                            println!("List Empty, type {} to add tasks", "add <task>".bright_cyan());
-
-                        } else {show_list(&loaded_list);};
-                    }
-                    Err(e) => println!("Error {e}")
+        } else {
+            match command {
+                "add" => { //multi-line add.. i.e add opens editor
+                    multi_line_add(&mut tasks);
                 }
-            }
 
-            "exit" => break,
-            _ => println!("{}", "Error: Enter valid command\n".bright_red().italic())
+                "load" => {
+                    match read_file() {
+                        Ok(loaded_list) => {
+                            println!("{}", "\nList Loaded successfully from file\n".bright_yellow());
+
+                            if loaded_list.is_empty() {
+                                println!("List Empty, type {} to add tasks", "add <task>".bright_cyan());
+
+                            } else {show_list(&loaded_list);};
+                        }
+                        Err(e) => println!("Error {e}")
+                    }
+                }
+
+                "exit" => break,
+                _ => println!("{}", "Error: Enter valid command\n".bright_red().italic())
+            }
         }
     }
 }

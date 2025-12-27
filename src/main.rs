@@ -94,44 +94,44 @@ fn show_list(list: &Vec<String>, unsaved_tasks_index: &usize) {
     }
 }
 
-fn single_line_add(tasks: &mut Vec<String>, command: &str) {
+fn single_line_add(list: &mut Vec<String>, command: &str) {
     let new_task = command.strip_prefix("add ").expect("Failed to strip prefix 'add'");
-    tasks.push(new_task.trim().to_string());
+    list.push(new_task.trim().to_string());
     println!("{}", "Task added successfully!".bright_green());
 }
 
-fn multi_line_add(tasks: &mut Vec<String>) {
+fn multi_line_add(list: &mut Vec<String>) {
     let mut new_task = String::new();
     io::stdin().read_line(&mut new_task).expect("Failed to read task");
-    tasks.push(new_task.trim().to_string());
+    list.push(new_task.trim().to_string());
 }
 
-// fn mark_done(index: usize) {
-//     match read_file() {
-//         Ok(mut loaded_list) => {
-//             if index <= 0 || index > loaded_list.len() {
-//                 println!("{}", "Not valid task number".bright_red());
-//             } else {
-//                 loaded_list.remove(index-1);
-//                 println!("Task Marked Done!");
-//             }
-//         } 
-        
-//         Err(e) => println!("{}", format!("Error: {e}").bright_red())
-//     }
-// }
+fn mark_done(list: &mut Vec<String>, index: usize, unsaved_tasks_index: &mut usize) {
+    if index <= 0 || index > list.len() {
+        println!("{}", "Enter valid task number".bright_red());
+        return ();
+    }
 
-// fn single_line_done(command: &str) {
-//     let number = command.strip_prefix("done ").expect("Failed to strip prefix 'done'");
+    list.remove(index);
+    if index <= *unsaved_tasks_index {
+        *unsaved_tasks_index -= 1;
+    }
 
-//     match number.trim().parse::<usize>() {
-//         Ok(int_number) if int_number > 0 => mark_done(int_number),
-//         _ => println!("{}", "Task index not a number".bright_red())
-//     }
-// }
+    let og_index = index + 1;
+    println!("{}", format!("Task {og_index} done! Good job! (Don't forget to save)").bright_yellow());
+}
+
+fn single_line_done(list: &mut Vec<String>, command: &str, unsaved_tasks_index: &mut usize) {
+    let number = command.strip_prefix("done ").expect("Failed to strip prefix 'done'");
+
+    match number.trim().parse::<usize>() {
+        Ok(int_number) if int_number > 0 => mark_done(list, int_number - 1, unsaved_tasks_index),
+        _ => println!("{}", "Task index not a number".bright_red())
+    }
+}
 
 // fn multi_line_done() {
-//     show_tasks();
+//     show_list();
     
 //     print!("{}", "Enter task number to mark done: ".bright_yellow());
 //     io::stdout().flush().expect("Unable to flush stdout");
@@ -181,10 +181,14 @@ fn main() {
         //one-liner tasks
         if command.starts_with("add ") {
             single_line_add(&mut tasks, command);
-        } else if command.starts_with("done ") {
-            // single_line_done(command);
-        } else {
-            //multi-line tasks
+        } 
+        
+        else if command.starts_with("done ") {
+            single_line_done(&mut tasks, command, &mut unsaved_tasks_index);
+        } 
+        
+        //multi-line tasks
+        else {
             match command {
                 "add" => multi_line_add(&mut tasks),
 
@@ -194,7 +198,7 @@ fn main() {
 
                 "exit" => exit_program(&tasks, &unsaved_tasks_index),
 
-                _ => println!("{}", "Error: Enter valid command\n".bright_red().italic())
+                _ => println!("{}", "Error: Enter valid command".bright_red().italic())
             }
         }
     }

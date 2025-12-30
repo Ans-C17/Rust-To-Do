@@ -2,8 +2,6 @@ use std::{io::{self, Read, Write}, process::exit};
 use colored::*;
 use std::fs::OpenOptions;
 
-//TODO MUST: IF CURRENT TASK LIST LENGTH > 0, REMIND USER IF HE CLICKS EXIT
-
 fn decorate() {
     println!("{} {}{} {}", "\n               MY".bright_red(), "TO".bright_cyan(), "DO".bright_yellow(), "LIST".bright_red());
     println!("{}", "add, show, done, delete, search, save, exit".purple().italic())
@@ -63,7 +61,7 @@ fn load_into_list(unsaved_tasks_index: &mut usize) -> Vec<String> {
 }
 
 fn save(list: &mut Vec<String>, unsaved_tasks_index: &mut usize) {
-    if list.len() == 0 {
+    if list.is_empty() {
         println!("List Empty");
         return ();
     }
@@ -87,7 +85,7 @@ fn show_list(list: &Vec<String>, unsaved_tasks_index: &usize) {
             println!("{}", line.bright_green());
         }
 
-        for i in *unsaved_tasks_index+1..list.len(){
+        for i in *unsaved_tasks_index+1..list.len() {
             let line = format!("{}. {}", i + 1, list[i]);
             println!("{}", line.bright_red());
         }
@@ -107,46 +105,53 @@ fn multi_line_add(list: &mut Vec<String>) {
 }
 
 fn mark_done(list: &mut Vec<String>, index: usize, unsaved_tasks_index: &mut usize) {
-    if index <= 0 || index > list.len() {
-        println!("{}", "Enter valid task number".bright_red());
-        return ();
-    }
+    list.remove(index); //this will be a valid index since we checked it beforehand
 
-    list.remove(index);
     if index <= *unsaved_tasks_index {
         *unsaved_tasks_index -= 1;
     }
 
     let og_index = index + 1;
-    println!("{}", format!("Task {og_index} done! Good job! (Don't forget to save)").bright_yellow());
+    println!("{}{}", format!("Task {og_index} done! Good job!").bright_yellow(), " (Don't forget to save your changes)".bright_purple());
+}
+
+fn parse_integer_and_proceed(list: &mut Vec<String>, number: &str, unsaved_tasks_index: &mut usize) {
+    let int_number = number.trim().parse::<usize>();
+
+    match int_number {
+        Ok(int_number) => {
+            if int_number > 0 && int_number <= list.len() { //int num isnt an index, so it goes from 1 to list.len
+                let index = int_number - 1;
+                mark_done(list, index, unsaved_tasks_index)
+            } else {
+                println!("{}", "Enter valid task number".bright_red());
+            }
+        }
+
+        _ => println!("{}", "Task number not a valid number".bright_red())
+    }
 }
 
 fn single_line_done(list: &mut Vec<String>, command: &str, unsaved_tasks_index: &mut usize) {
     let number = command.strip_prefix("done ").expect("Failed to strip prefix 'done'");
-
-    match number.trim().parse::<usize>() {
-        Ok(int_number) if int_number > 0 => mark_done(list, int_number - 1, unsaved_tasks_index),
-        _ => println!("{}", "Task index not a number".bright_red())
-    }
+    parse_integer_and_proceed(list, number, unsaved_tasks_index);
 }
 
-// fn multi_line_done() {
-//     show_list();
+fn multi_line_done(list: &mut Vec<String>, unsaved_tasks_index: &mut usize) {
+    println!("{}", "\nMy Tasks".bright_yellow());
+    show_list(list, unsaved_tasks_index);
     
-//     print!("{}", "Enter task number to mark done: ".bright_yellow());
-//     io::stdout().flush().expect("Unable to flush stdout");
+    print!("{}", "\nEnter task number to mark done: ".bright_yellow());
+    io::stdout().flush().expect("Unable to flush stdout");
     
-//     let mut number = String::new();
-//     io::stdin().read_line(&mut number).expect("Unable to read number");
-    
-//     match number.trim().to_string().parse::<usize>() {
-//         Ok(int_number) if int_number > 0 => mark_done(int_number),
-//         _ => println!("{}", "Task index not a number".bright_red())
-//     }
-// }
+    let mut number = String::new();
+    io::stdin().read_line(&mut number).expect("Unable to read number");
+
+    parse_integer_and_proceed(list, &number, unsaved_tasks_index);
+}
 
 fn exit_program(list: &Vec<String>, unsaved_tasks_index: &usize) {
-    if *unsaved_tasks_index < list.len() - 1 {
+    if !list.is_empty() && *unsaved_tasks_index < list.len() - 1 {
         let mut choice = String::new();
 
         print!("{}", "You have unsaved tasks, quit anyway? (Y/N) ".bright_red());
@@ -191,6 +196,8 @@ fn main() {
         else {
             match command {
                 "add" => multi_line_add(&mut tasks),
+
+                "done" => multi_line_done(&mut tasks, &mut unsaved_tasks_index),
 
                 "show" => show_list(&tasks, &unsaved_tasks_index),
                 
